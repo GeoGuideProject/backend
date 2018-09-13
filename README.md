@@ -1,5 +1,7 @@
 # [GeoGuide](https://geoguide.herokuapp.com)
 
+:warning: **Currently in development. The following instructions may be outdated.**
+
 ## Quick Start
 
 > If you are using **Docker**, [start here](#get-a-dataset)
@@ -44,7 +46,8 @@ Copy and paste at APP_KEY in `.env` file
 ### Create DB
 
 ```sh
-$ python manage.py create_db
+$ python manage.py db init
+$ python manage.py db upgrade
 ```
 
 ### Compile JavaScript and CSS
