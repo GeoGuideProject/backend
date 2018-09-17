@@ -33,7 +33,8 @@ def upload():
     if request.method == 'POST' and 'datasetInputFile' in request.files:
         try:
             uploaded = request.files['datasetInputFile']
-            filename = datasets.save(uploaded, name='{}.'.format(uuid4()))
+            filename = dataset_manager.save(
+                uploaded, name='{}.'.format(uuid4()))
             title = request.form['titleInputText']
             number_of_rows = None
             if request.form['numberRowsInputNumber']:
@@ -67,7 +68,7 @@ def upload():
     vm['datasets'] = current_user.datasets
     needs_reload = False
     for dataset in vm['datasets']:
-        if not os.path.isfile(datasets.path(dataset.filename)):
+        if not os.path.isfile(dataset_manager.path(dataset.filename)):
             db.session.delete(dataset)
             needs_reload = True
     if needs_reload:
@@ -91,7 +92,7 @@ def environment(selected_dataset):
     db.session.add(feedback_session)
     db.session.commit()
 
-    df = pd.read_csv(datasets.path(dataset.filename))
+    df = pd.read_csv(dataset_manager.path(dataset.filename))
     vm = {}
     vm['dataset_headers'] = list(df.select_dtypes(include=[np.number]).columns)
     vm['dataset_headers'] = [c for c in vm['dataset_headers']
@@ -104,7 +105,7 @@ def environment(selected_dataset):
         'attributes': [dict(description=attr.description, visible=attr.visible, type=dict(value=attr.type.value, description=attr.type.name)) for attr in dataset.attributes],
         'headers': vm['dataset_headers'],
     })
-    vm['dataset_url'] = datasets.url(dataset.filename)
+    vm['dataset_url'] = dataset_manager.url(dataset.filename)
     return render_template('geoguide/environment.html', **vm)
 
 
@@ -125,7 +126,7 @@ def dataset_details(selected_dataset):
 @login_required
 def point_details(selected_dataset, index):
     dataset = Dataset.query.filter_by(filename=selected_dataset).first_or_404()
-    df = pd.read_csv(datasets.path(dataset.filename))
+    df = pd.read_csv(dataset_manager.path(dataset.filename))
     return df.loc[index].to_json(), 200, {'Content-Type': 'application/json'}
 
 

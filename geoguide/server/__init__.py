@@ -84,8 +84,8 @@ def unauthorized():
 ##### uploads #####
 ###################
 
-datasets = UploadSet('datasets', ('csv',))
-configure_uploads(app, (datasets))
+dataset_manager = UploadSet('datasets', ('csv',))
+configure_uploads(app, (dataset_manager))
 
 
 ###################

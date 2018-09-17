@@ -97,6 +97,7 @@ class Dataset(db.Model):
 
 
 class AttributeType(enum.Enum):
+    unknown = 0
     datetime = 1
     number = 2
     text = 3

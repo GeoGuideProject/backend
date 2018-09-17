@@ -6,7 +6,7 @@ import numpy as np
 import os
 import shutil
 from itertools import chain
-from geoguide.server import app, db, datasets, logging
+from geoguide.server import app, db, dataset_manager, logging
 from geoguide.server.models import Dataset, Attribute, AttributeType
 from geoguide.server.similarity import cosine_similarity_with_nan as cosine_similarity, jaccard_similarity, fuzz_similarity
 from threading import Thread
@@ -21,15 +21,15 @@ SQLALCHEMY_DATABASE_URI = app.config['SQLALCHEMY_DATABASE_URI']
 
 
 def path_to_hdf(dataset):
-    return '{}.h5'.format(datasets.path(dataset.filename).rsplit('.', 1)[0])
+    return '{}.h5'.format(dataset_manager.path(dataset.filename).rsplit('.', 1)[0])
 
 
 def is_latlng_attribute(header):
     return 'latitude' in header or 'longitude' in header
 
 
-def guess_attributes_types(dataset, visible_attributes=[]):
-    df = pd.read_csv(datasets.path(dataset.filename))
+def guess_attributes_types(dataset):
+    df = pd.read_csv(dataset_manager.path(dataset.filename))
 
     attrs = [a.description for a in dataset.attributes]
 
@@ -44,45 +44,53 @@ def guess_attributes_types(dataset, visible_attributes=[]):
 
     text_attributes = [c for c in string_attributes if c not in categorical_text_attributes]
 
+    for attr in dataset.attributes:
+        attr.description = slugify(attr.description, separator='_')
+        if attr.type == AttributeType.unknown:
+            if attr.description in number_attributes:
+                attr.type = AttributeType.number
+                number_attributes.remove(attr.description)
+            elif attr.description in categorical_number_attributes:
+                attr.type = AttributeType.categorical_number
+                categorical_number_attributes.remove(attr.description)
+            elif attr.description in categorical_text_attributes:
+                attr.type = AttributeType.categorical_text
+                categorical_text_attributes.remove(attr.description)
+            elif attr.description in text_attributes:
+                attr.type = AttributeType.text
+                text_attributes.remove(attr.description)
+        db.session.add(attr)
+
     for attr in number_attributes:
-        if attr in attrs:
-            continue
-        attribute = Attribute(attr, AttributeType.number, dataset.id, attr in visible_attributes)
+        attribute = Attribute(attr, AttributeType.number, dataset.id, False)
         db.session.add(attribute)
 
     for attr in categorical_number_attributes:
-        if attr in attrs:
-            continue
-        attribute = Attribute(attr, AttributeType.categorical_number, dataset.id, attr in visible_attributes)
+        attribute = Attribute(attr, AttributeType.categorical_number, dataset.id, False)
         db.session.add(attribute)
 
     for attr in categorical_text_attributes:
-        if attr in attrs:
-            continue
-        attribute = Attribute(attr, AttributeType.categorical_text, dataset.id, attr in visible_attributes)
+        attribute = Attribute(attr, AttributeType.categorical_text, dataset.id, False)
         db.session.add(attribute)
 
     for attr in text_attributes:
-        if attr in attrs:
-            continue
-        attribute = Attribute(attr, AttributeType.text, dataset.id, attr in visible_attributes)
+        attribute = Attribute(attr, AttributeType.text, dataset.id, False)
         db.session.add(attribute)
 
     db.session.commit()
 
 
-def save_as_sql(dataset, visible_attributes):
+def save_as_sql(dataset):
     engine = create_engine(SQLALCHEMY_DATABASE_URI)
 
     dataset_id = dataset.id
     datetime_columns = [attr.description for attr in dataset.attributes if attr.type == AttributeType.datetime]
 
-    original_csv_path = datasets.path(dataset.filename)
+    original_csv_path = dataset_manager.path(dataset.filename)
     csv_path = '{}.normalized.csv'.format(original_csv_path.rsplit('.', 1)[0])
     table_name = 'datasets.' + dataset.filename.rsplit('.', 1)[0]
     is_first = True
 
-    visible_attributes = [slugify(attr, separator='_') for attr in visible_attributes]
     dataset.latitude_attr = slugify(dataset.latitude_attr, separator='_')
     dataset.longitude_attr = slugify(dataset.longitude_attr, separator='_')
     db.session.add(dataset)
@@ -99,7 +107,7 @@ def save_as_sql(dataset, visible_attributes):
     os.remove(original_csv_path)
     shutil.move(csv_path, original_csv_path)
 
-    guess_attributes_types(dataset, visible_attributes)
+    guess_attributes_types(dataset)
 
     Thread(target=lambda: index_dataset_from_sql(dataset_id)).start()
 
@@ -195,7 +203,7 @@ def index_dataset_from_sql(dataset_id):
 def save_as_hdf(dataset):
     dataset_id = dataset.id
     datetime_columns = [attr.description for attr in dataset.attributes if attr.type == AttributeType.datetime]
-    original_csv_path = datasets.path(dataset.filename)
+    original_csv_path = dataset_manager.path(dataset.filename)
     csv_path = '{}.normalized.csv'.format(original_csv_path.rsplit('.', 1)[0])
     hdf_path = '{}.h5'.format(original_csv_path.rsplit('.', 1)[0])
     is_first = True

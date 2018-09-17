@@ -10,7 +10,7 @@ from geoguide.server import app, db
 from geoguide.server.models import User
 
 auth_blueprint = Blueprint('api_auth', __name__)
-api = Api(auth_blueprint, prefix='/api', catch_all_404s=True)
+api = Api(auth_blueprint, prefix='/api/v1', catch_all_404s=True)
 
 user_fields = {
     'email': fields.String,
@@ -24,11 +24,11 @@ token_fields = {
 class UserBaseResource(Resource):
 
     def get_user(self, email):
-        user = User.query.filter_by(email=email).first_or_404()
+        user = User.query.filter_by(email=email).first()
         return user
 
     def is_email_already_registered(self, email):
-        user = User.query.filter_by(email=email).first()
+        user = self.get_user(email)
         return user is not None
 
 
@@ -70,7 +70,7 @@ class UserDetail(UserBaseResource):
 class UserRegister(UserBaseResource):
 
     parser = reqparse.RequestParser()
-    parser.add_argument('email', type=str)
+    parser.add_argument('email', type=str, required=True)
     parser.add_argument('password', type=str, required=True)
     parser.add_argument('confirmPassword', type=str, required=True)
 
@@ -101,6 +101,8 @@ class AuthToken(UserBaseResource):
     def post(self):
         args = self.token_parser.parse_args()
         user = self.get_user(args['email'])
+        if user is None:
+            abort(401, message='Invalid credentials')
         if user.check_password(args['password']):
             iat = arrow.utcnow()
             token = jwt.encode({
