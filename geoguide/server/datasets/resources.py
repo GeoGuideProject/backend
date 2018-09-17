@@ -19,7 +19,6 @@ attribute_fields = {
     'visible': fields.Boolean
 }
 
-
 dataset_fields = {
     'id': fields.String(attribute=lambda x: x.filename.rsplit('.')[0]),
     'title': fields.String,
@@ -28,6 +27,7 @@ dataset_fields = {
     'longitudeAttr': fields.String(attribute="longitude_attr"),
     'createdAt': fields.DateTime(attribute="created_at", dt_format='iso8601'),
     'indexedAt': fields.DateTime(attribute="indexed_at", dt_format='iso8601'),
+    'lastUsedAt': fields.DateTime(attribute="last_used_at", dt_format='iso8601'),
     'attributes': fields.List(fields.Nested(attribute_fields))
 }
 

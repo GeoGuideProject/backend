@@ -7,6 +7,7 @@ from sqlalchemy_utils import ChoiceType
 from flask_login import current_user
 from geoalchemy2 import Geometry
 from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy import desc
 
 
 class User(db.Model):
@@ -24,7 +25,7 @@ class User(db.Model):
     def __init__(self, email, password, admin=False):
         self.email = email
         self.password = self.set_password(password)
-        self.registered_on = datetime.datetime.now()
+        self.registered_on = datetime.datetime.now(datetime.timezone.utc)
         self.admin = admin
 
     def is_authenticated(self):
@@ -76,8 +77,20 @@ class Dataset(db.Model):
         self.number_of_rows = number_of_rows
         self.latitude_attr = latitude_attr
         self.longitude_attr = longitude_attr
-        self.created_at = datetime.datetime.now()
+        self.created_at = datetime.datetime.now(datetime.timezone.utc)
         self.user_id = current_user.id
+
+    @property
+    def last_used_at(self):
+        session = Session.query.filter_by(
+            dataset_id=self.id
+        ).order_by(
+            desc(Session.created_at)
+        ).first()
+
+        if session is None:
+            return None
+        return session.created_at
 
     def __repr__(self):
         return '<Dataset {}>'.format(self.filename)
@@ -123,7 +136,7 @@ class Session(db.Model):
 
     def __init__(self, dataset):
         self.user_id = current_user.id
-        self.created_at = datetime.datetime.now()
+        self.created_at = datetime.datetime.now(datetime.timezone.utc)
         self.dataset_id = dataset.id
 
     def __repr__(self):
@@ -146,7 +159,7 @@ class Polygon(db.Model):
         self.geom = geom
         self.iteration = iteration
         self.session_id = session_id
-        self.created_at = datetime.datetime.now()
+        self.created_at = datetime.datetime.now(datetime.timezone.utc)
 
     def __repr__(self):
         return '<Polygon {}>'.format(self.id)
@@ -170,7 +183,7 @@ class IDR(db.Model):
         self.geom = geom
         self.iteration = iteration
         self.session_id = session_id
-        self.created_at = datetime.datetime.now()
+        self.created_at = datetime.datetime.now(datetime.timezone.utc)
 
     def __repr__(self):
         return '<IDR {}>'.format(self.id)

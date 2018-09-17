@@ -185,7 +185,7 @@ def index_dataset_from_sql(dataset_id):
         set (similarity, distance) = (similarity/{}, distance/{})
         '''.format(table_rel_name, greatest_similarity, greatest_distance))
 
-        dataset.indexed_at = datetime.datetime.now()
+        dataset.indexed_at = datetime.datetime.now(datetime.timezone.utc)
         db.session.add(dataset)
         db.session.commit()
 
@@ -316,7 +316,7 @@ def index_dataset_from_hdf(dataset_id):
 
         os.remove(tmp_hdf_path)
 
-        dataset.indexed_at = datetime.datetime.now()
+        dataset.indexed_at = datetime.datetime.now(datetime.timezone.utc)
         db.session.add(dataset)
         db.session.commit()
         if DEBUG: logging.info('[PROCESSING HDF] {} seconds'.format(time() - start))
