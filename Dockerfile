@@ -3,6 +3,7 @@ FROM python:3-alpine
 RUN apk --update --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing add \
     g++ \
     gcc \
+    geos \
     hdf5-dev \
     libffi-dev \
     libstdc++ \
