@@ -1,32 +1,18 @@
 # [GeoGuide](https://geoguide.herokuapp.com)
 
-:warning: **Currently in development. The following instructions may be outdated.**
-
 ## Quick Start
-
-> If you are using **Docker**, [start here](#get-a-dataset)
 
 ### Requirements
 
-- [__Python >= 3__](https://www.python.org/downloads/) and `pip`
-- [__Node.js >= 6__](https://nodejs.org/en/) and `npm`
-  - it's highly recommended install with [`nvm`](https://github.com/creationix/nvm)
+- [**Python**](https://www.python.org/downloads/)
+- [**pipenv**](https://pipenv.readthedocs.io/en/latest/install/#installing-pipenv)
 
 ### Basics
-
-Create and activate a virtualenv
-
-```sh
-$ sudo pip install virtualenv # if not installed
-$ virtualenv env -p python3
-$ source env/bin/activate
-```
 
 Install the required packages
 
 ```sh
-$ pip install -r requirements-sqlite.txt
-$ npm install
+$ pipenv install --dev
 ```
 
 ### Set Environment Variables
@@ -38,22 +24,28 @@ $ cp .env.example .env
 Generate a new APP_KEY
 
 ```sh
-$ python generate_key.py
+$ pipenv run python generate_key.py
 ```
 
-Copy and paste at APP_KEY in `.env` file
-
 ### Create DB
+
+First you have to open pipenv shell
+
+```sh
+$ pipenv shell
+```
+
+> If you don't have postgres installed, you can use [Docker](https://docs.docker.com/install/linux/docker-ce/ubuntu/) with [Docker Compose](https://docs.docker.com/compose/install/) to start a database container executing
+>
+> ```sh
+> $ docker-compose up -d db
+> ```
+
+Then you execute
 
 ```sh
 $ python manage.py db init
 $ python manage.py db upgrade
-```
-
-### Compile JavaScript and CSS
-
-```sh
-$ npm run build
 ```
 
 ### Get a dataset
@@ -63,17 +55,6 @@ You can [download a .zip](https://github.com/GeoGuideProject/datasets/archive/ma
 Feel free to try another dataset.
 
 ### Run the Application
-
-#### Docker
-
-```sh
-$ ./deploy
-$ docker-compose up
-```
-
-So access the application at the address [http://localhost:8000/](http://localhost:8000/)
-
-#### Or
 
 ```sh
 $ python manage.py runserver
@@ -86,6 +67,8 @@ So access the application at the address [http://localhost:5000/](http://localho
 > ```sh
 > $ python manage.py runserver -h 0.0.0.0 -p 8080
 > ```
+
+Now you are ready to run the [frontend project](https://github.com/GeoGuideProject/frontend)
 
 ### Testing
 
