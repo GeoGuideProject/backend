@@ -1,6 +1,7 @@
 import jwt
 import arrow
 from uuid import uuid4
+from geoguide.server.iuga import run_iuga
 
 import werkzeug
 from flask import Blueprint, request
@@ -8,7 +9,7 @@ from flask_restful import Api, Resource, marshal_with, reqparse, abort, fields
 from flask_login import current_user, login_required
 
 from geoguide.server import app, db, dataset_manager
-from geoguide.server.models import Dataset, AttributeType, Attribute
+from geoguide.server.models import Dataset, AttributeType, Attribute, Session
 from geoguide.server.geoguide.helpers import save_as_sql
 
 
@@ -32,6 +33,13 @@ dataset_fields = {
     'indexedAt': fields.DateTime(attribute="indexed_at", dt_format='iso8601'),
     'lastUsedAt': fields.DateTime(attribute="last_used_at", dt_format='iso8601'),
     'attributes': fields.List(fields.Nested(attribute_fields))
+}
+
+session_fields = {
+    'id': fields.String,
+    'createdAt': fields.DateTime(attribute="created_at", dt_format='iso8601'),
+    'userId': fields.String(attribute='user_id'),
+    'datasetId': fields.String(attribute="dataset_id")
 }
 
 
@@ -126,5 +134,39 @@ class DatasetList(DatasetBaseResource):
         return dataset
 
 
+class SessionResource(DatasetBaseResource):
+
+    @marshal_with(session_fields)
+    @login_required
+    def post(self, uuid):
+        dataset = self.get_dataset(uuid)
+
+        feedback_session = Session(dataset=dataset)
+        db.session.add(feedback_session)
+        db.session.commit()
+
+        return feedback_session
+
+
+class IugaResource(DatasetBaseResource):
+
+    parser = reqparse.RequestParser()
+    parser.add_argument('k', type=int, required=True)
+    parser.add_argument('sigma', type=float, required=True)
+    parser.add_argument('limit', type=float, required=True)
+
+    #@marshal_with({'name': fields.String})
+    @login_required
+    def post(self, uuid, index):
+        args = self.parser.parse_args()
+        dataset = self.get_dataset(uuid)
+        vm = {}
+        vm['similarity'], vm['diversity'], vm['points'] = run_iuga(
+            index, args['k'], args['limit'], args['sigma'], dataset)
+        return vm
+
+
 api.add_resource(DatasetDetail, "/datasets/<string:uuid>")
 api.add_resource(DatasetList, "/datasets")
+api.add_resource(SessionResource, "/datasets/<string:uuid>/new-session")
+api.add_resource(IugaResource, "/datasets/<string:uuid>/<int:index>/iuga")
